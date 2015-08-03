@@ -71,6 +71,20 @@ col = [0 0 0.7; 0 0.5 0];
 plot(xc, Ey(:, 1), 'color', col(1, :))
 plot(xc, Ey(:, 2), 'color', col(2, :))
 
+% focus of attention and distribution of gain
+subplot(4, 3, 3)
+hold on
+xa = linspace(-1, 2, 100);
+plot(xa, normpdf(xa, 0.5, stdpsi(1)), 'color', col(1, :))
+plot(xa, normpdf(xa, 0.5, stdpsi(2)), 'color', col(2, :))
+xlabel('Attended location')
+set(gca, 'xlim', [-1 2])
+
+subplot(4, 3, 6)
+g = linspace(1, 1.4, 100);
+plot(g, normpdf(g, 1 + mu, sigma), 'k')
+xlabel('Gain')
+set(gca, 'xlim', g([1 end]))
 
 % modeling the experimental data: heterogeneous population
 neurons = 512;
