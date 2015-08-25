@@ -1,5 +1,5 @@
-function fig6_fisherinfo
-% Fig. 6 - Fisher information under fluctuations of attentional state
+function fig7_fisherinfo
+% Fig. 7 - Fisher information under fluctuations of attentional state
 
 
 % set input noise level for given threshold

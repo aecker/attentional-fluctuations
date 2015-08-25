@@ -1,5 +1,5 @@
-function fig7_cm2011
-% Fig. 7 -- Modeling Cohen & Maunsell 2011, feature attention
+function fig8_cm2011
+% Fig. 8 -- Modeling Cohen & Maunsell 2011, feature attention
 
 rng(6347563)
 

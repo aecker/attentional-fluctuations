@@ -1,5 +1,5 @@
-function fig8_rc2014()
-% Fig. 8 -- Modeling Ruff & Cohen 2014
+function fig9_rc2014()
+% Fig. 9 -- Modeling Ruff & Cohen 2014
 
 rng(76348536)
 

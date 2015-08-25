@@ -1,5 +1,5 @@
-function fig6_pca
-% Fig. 6 -- Subspace spanned by attentional fluctuations
+function fig10_pca
+% Fig. 10 -- Subspace spanned by attentional fluctuations
 
 
 % Parameters
