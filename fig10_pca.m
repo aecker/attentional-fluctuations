@@ -13,7 +13,7 @@ normalize = @(x) x / norm(x(1 : end - 1));
 
 
 % [A] Regular principal components
-fig = Figure(6, 'size', [100 30]);
+fig = Figure(10, 'size', [100 30]);
 f = @(theta) exp(kappa * cos(theta - phi));
 fp = @(theta) -kappa * sin(theta - phi) .* f(theta);
 h = @(psi) beta * cos(psi - phi);

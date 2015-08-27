@@ -6,29 +6,24 @@ function fig5_feature
 neurons = 50;
 phi = linspace(-pi, pi, neurons + 1);
 phi = phi(1 : neurons);
-beta = 0.1;         % attentional gain
-q = 10 / 180 * pi;  % SD[psi] = 10 deg
-kappa = 2;
-fmean = 10;
-f = exp(kappa .* (cos(phi) - 1));   % tuning function
+beta = 0.1;                 % attentional gain
+sdpsi = 10 / 180 * pi;      % variability of attended direction (SD: 10deg)
+h = cos(phi);               % gain profile
+kappa = 2;                  % tuning width
+fmean = 10;                 % mean firing rate across the population
+f = exp(kappa .* cos(phi)); % tuning function
 f = f / mean(f) * fmean;
-h = cos(phi);
-hp = -sin(phi);
+mu = exp(beta * h) .* f;    % expected firing rate
+mup = kappa * -sin(phi) .* mu;  % derivative of tuning curve
 
 % [A] Covariance matrix for small fluctuations around presented direction 
 fig = Figure(5, 'size', [200 35]);
 subplot(1, 3, 1)
-u = q * beta * hp .* f;
-C = diag((1 + beta * h) .* f) + (u' * u);
+C = diag(mu) + sdpsi^2 * beta^2 / kappa^2 * (mup' * mup);
 imagesc([-180 180], [-180 180], C)
-p = 100;
-g = (1/p : 1/p : 1)';
-gi = flipud(g);
-o = ones(p, 1);
-cm = [g g o; o gi gi; 0 0 0];
-colormap(cm)
+colormap(bluered)
 colorbar
-caxis([-1, 1 + 2/p] * max(offdiag(C)))
+caxis([-1, 1] * max(offdiag(C)) * 1.02)
 axis square
 xlabel('\phi_i')
 ylabel('\phi_j')
@@ -39,9 +34,9 @@ set(gca, 'XTick', -180 : 90 : 180, 'YTick', -180 : 90 : 180)
 subplot(1, 3, 2)
 R = C ./ sqrt(diag(C) * diag(C)');
 imagesc([-180 180], [-180 180], R)
-colormap(cm)
+colormap(bluered)
 colorbar
-caxis([-1, 1 + 2/p] * max(offdiag(R)))
+caxis([-1, 1] * max(offdiag(R)) * 1.02)
 axis square
 xlabel('\phi_i')
 ylabel('\phi_j')
@@ -54,16 +49,16 @@ neurons = 500;
 phi = linspace(-pi, pi, neurons + 1);
 phi = phi(1 : neurons);
 h = cos(phi);
-hp = -sin(phi);
 colors = [0.9 0.7 0; 1 0.4 0; 1 0 0; 0.6 0 0.8; 0 0 0.8];
 kappa = 2 .^ (-1 : 3);
 subplot(1, 3, 3)
 hold on
 for i = 1 : numel(kappa)
-    f = exp(kappa(i) .* (cos(phi) - 1));   % tuning function
+    f = exp(kappa(i) .* cos(phi));   % tuning function
     f = f / mean(f) * fmean;
-    u = q * beta * hp .* f;
-    C = diag((1 + beta * h) .* f) + (u' * u);
+    mu = exp(beta * h) .* f;
+    mup = kappa(i) * -sin(phi) .* mu;
+    C = diag(mu) + sdpsi^2 * beta^2 / kappa(i)^2 * (mup' * mup);
     R = C ./ sqrt(diag(C) * diag(C)');
     dphi = abs(angle(exp(1i * bsxfun(@minus, phi, phi')))) / pi * 180;
     dphi = offdiag(dphi);

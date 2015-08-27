@@ -3,20 +3,20 @@ function fig9_rc2014()
 
 rng(76348536)
 
-fig = Figure(8, 'size', [150 65]);
+fig = Figure(9, 'size', [150 65]);
 
 % Receptive fields
 neurons = 50;
 xs = [0.35 0.65];
 xc = linspace(0, 1, neurons)';
 w = 0.5;
-a = 3;
+gamma = 3;
 
 subplot(2, 3, 1)
 hold on
 f = zeros(neurons, 2);
 for i = 1 : 2
-    f(:, i) = exp(-(xc - xs(i)).^2 ./ (2 * w^2) + a);
+    f(:, i) = exp(-(xc - xs(i)).^2 ./ (2 * w^2) + gamma);
     plot(xc, f(:, i), ':k')
 end
 set(gca, 'xtick', [0 xs 1], 'xlim', [0 1], 'ylim', [0 25])
@@ -34,30 +34,24 @@ xlabel('Distance from attended location')
 ylabel('Gain profile')
 
 % correlation structure
-mu = 0.2;
-sigma = 0.05;
-stdpsi = [0.5 0.2];  % (unattended, attended)
+mbeta = 0.2;
+sdbeta = 0.05;
+sdpsi = [0.5 0.2];  % (unattended, attended)
 f = mean(f, 2); % assuming the response to both stimuli simultaneously is
                 % the as the average response to the individual stimuli
-p = 100;
-g = (1/p : 1/p : 1)';
-gi = flipud(g);
-o = ones(p, 1);
-cm = [g g o; o gi gi; 0 0 0];
 k = 25;
-Ey = zeros(size(f));
+mu = zeros(size(f));
 for i = 1 : 2
-    psi = 0.5 + linspace(-5, 5, k) * stdpsi(i);
-    ppsi = normpdf(psi, 0.5, stdpsi(i));
+    psi = 0.5 + linspace(-5, 5, k) * sdpsi(i);
+    ppsi = normpdf(psi, 0.5, sdpsi(i));
     ppsi = ppsi / sum(ppsi);
-    [Ey(:, i), Cy] = statistics(f, xc, mu, sigma, h, psi, ppsi);
-    Cy = corrcov(Cy, true);
+    [mu(:, i), R] = statistics(f, xc, mbeta, sdbeta, h, psi, ppsi);
     if i == 1
-        ca = max(abs(offdiag(Cy))) * (p + 2) / p;
+        ca = max(abs(offdiag(R))) * 1.02;
     end
     subplot(2, 3, 6 - i)
-    imagesc([0 1], [0 1], Cy)
-    colormap(cm)
+    imagesc([0 1], [0 1], R)
+    colormap(bluered)
     caxis([-1 1] * ca)
     colorbar
     xlabel('Neuron i')
@@ -68,21 +62,21 @@ end
 % mean responses: attended and unattended
 subplot(2, 3, 1)
 col = [0 0 0.7; 0 0.5 0];
-plot(xc, Ey(:, 1), 'color', col(1, :))
-plot(xc, Ey(:, 2), 'color', col(2, :))
+plot(xc, mu(:, 1), 'color', col(1, :))
+plot(xc, mu(:, 2), 'color', col(2, :))
 
 % focus of attention and distribution of gain
 subplot(4, 3, 3)
 hold on
 xa = linspace(-1, 2, 100);
-plot(xa, normpdf(xa, 0.5, stdpsi(1)), 'color', col(1, :))
-plot(xa, normpdf(xa, 0.5, stdpsi(2)), 'color', col(2, :))
+plot(xa, normpdf(xa, 0.5, sdpsi(1)), 'color', col(1, :))
+plot(xa, normpdf(xa, 0.5, sdpsi(2)), 'color', col(2, :))
 xlabel('Attended location')
 set(gca, 'xlim', [-1 2])
 
 subplot(4, 3, 6)
-g = linspace(1, 1.4, 100);
-plot(g, normpdf(g, 1 + mu, sigma), 'k')
+g = linspace(0, 0.4, 100);
+plot(g, normpdf(g, mbeta, sdbeta), 'k')
 xlabel('Gain')
 set(gca, 'xlim', g([1 end]))
 
@@ -90,10 +84,10 @@ set(gca, 'xlim', g([1 end]))
 neurons = 512;
 xc = linspace(0, 1, neurons)';
 w = 0.5 * exp(randn(neurons, 1) * 0.1);
-a = 2 + randn(neurons, 1) * 0.7;
+gamma = 2 + randn(neurons, 1) * 0.7;
 f = zeros(neurons, 2);
 for i = 1 : 2
-    f(:, i) = exp(-(xc - xs(i)) .^ 2 ./ (2 * w .^ 2) + a);
+    f(:, i) = exp(-(xc - xs(i)) .^ 2 ./ (2 * w .^ 2) + gamma);
 end
 dp = diff(f, [], 2) ./ sqrt(mean(f, 2));
 tts = dp * dp';
@@ -102,14 +96,12 @@ f = mean(f, 2);
 subplot(2, 3, 6)
 hold on
 bins = -5.5 : 5.5;
-R = zeros(neurons, neurons, 2);
 for i = 1 : 2
-    psi = 0.5 + linspace(-5, 5, k) * stdpsi(i);
-    ppsi = normpdf(psi, 0.5, stdpsi(i));
+    psi = 0.5 + linspace(-5, 5, k) * sdpsi(i);
+    ppsi = normpdf(psi, 0.5, sdpsi(i));
     ppsi = ppsi / sum(ppsi);
-    [~, Cy] = statistics(f, xc, mu, sigma, h, psi, ppsi);
-    R(:, :, i) = corrcov(Cy, true);
-    [r, binc] = makeBinned(offdiag(tts), offdiag(R(:, :, i)), bins, @mean, 'include');
+    [~, R] = statistics(f, xc, mbeta, sdbeta, h, psi, ppsi);
+    [r, binc] = makeBinned(offdiag(tts), offdiag(R), bins, @mean, 'include');
     plot(binc, r, 'color', col(i, :))
 end
 xlabel('TTS')
@@ -121,7 +113,7 @@ fig.cleanup()
 fig.save([mfilename('fullpath'), '_.eps'])
 
 
-function [Ey, Cy] = statistics(f, x, mu, sigma, h, psi, ppsi)
+function [mu, R] = statistics(f, x, mbeta, stbeta, h, psi, ppsi)
 
 % mean and variance (across attended locations) of gain profile
 H = h(x, psi);
@@ -129,15 +121,13 @@ Eh = H * ppsi';
 Ehh = H * bsxfun(@times, ppsi, H)';
 
 % mean and variance of gain
-Eg = 1 + (mu * H) * ppsi';
-Cg = (mu^2 + sigma^2) * Ehh - mu^2 * (Eh * Eh');
+Eg = (mbeta * H) * ppsi';
+Cg = (mbeta^2 + stbeta^2) * Ehh - mbeta^2 * (Eh * Eh');
 
 % average spike count
-Ey = Eg .* f;
+mu = exp(Eg) .* f;
 
 % spike count correlations
-Cy = diag(Ey) + Cg .* (f * f');
-Cy = corrcov(Cy, true);
-
-
+C = diag(mu) + Cg .* (mu * mu');
+R = C ./ sqrt(diag(C) * diag(C)');
 
