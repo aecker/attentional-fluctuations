@@ -9,6 +9,7 @@ thresh = [0.5 3] / 180 * pi;    % threshold based on input noise
 sdtheta = thresh / dp;          % SD of input noise
 
 n = 10 : 10 : 500;              % number of neurons
+malpha = 0.1;                   % average spatial gain
 sdalpha = 0.1;                  % variance of spatial gain
 mbeta = 0.2;                    % average feature gain
 sdbeta = 0.1;                   % variance of feature gain
@@ -21,80 +22,96 @@ amplvar = 1.5;                  % variance of amplitudes across the population
 
 nk = numel(n);
 nt = numel(sdtheta);
-ns = numel(sdalpha);
-J = zeros(nk, ns, nt);
+J = zeros(nk, 4, nt, 2);
 
 % generate population
-for k = 1 : nk
-    neurons = n(k);
-    phi = (0.5 : neurons) / neurons * 2 * pi - pi;
-    f = exp(kappa .* cos(phi) + gamma);
-    df = -kappa .* sin(-phi) .* f;
-    h = cos(phi);
-    lambda = (1 + mbeta * h) .* f;
-    dlambda = (1 + mbeta * h) .* df;
-
-    % (1) no attentional fluctuations
-    J0 = dlambda * diag(1 ./ lambda) * dlambda';
-    J(k, 1, 1) = J0;
-    
-    % (2) spatial gain fluctuations
-    J(k, 2, 1) = J0 - amplvar * sum(dlambda .^ 2) / (sdalpha ^ -2 + sum(f));
-    
-    % (3) feature gain fluctuations
-    J(k, 3, 1) = J0 - amplvar * sum((h .* dlambda) .^ 2) / (sdbeta ^ -2 + sum(h .^ 2 .* f));
-    
-    % (4) attended feature fluctuations
-    J(k, 4, 1) = J0 / (1 + (sdpsi ^ 2 * mbeta ^ 2 / kappa ^ 2) * J0);
-    
-    % add effect pf input noise
-    for j = 1 : nt
-        for i = 1 : 4
-            J(k, i, j + 1) = J(k, i, 1) / (1 + sdtheta(j) ^ 2 * J(k, i, 1));
+for l = 1 : 2
+    for k = 1 : nk
+        neurons = n(k);
+        phi = (0.5 : neurons) / neurons * 2 * pi - pi;
+        f = exp(kappa .* cos(phi) + gamma);
+        df = -kappa .* sin(-phi) .* f;
+        h = cos(phi);
+        
+        if l == 1
+            mu = f;
+            dmu = df;
+        else
+            mu = exp(malpha + mbeta * h) .* f;
+            dmu = exp(malpha + mbeta * h) .* df;
+        end
+        
+        % (1) no attentional fluctuations
+        J0 = dmu * diag(1 ./ mu) * dmu';
+        J(k, 1, 1, l) = J0;
+        
+        % (2) spatial gain fluctuations
+        J(k, 2, 1, l) = J0 - amplvar * sum(dmu .^ 2) / (sdalpha ^ -2 + sum(mu));
+        
+        % (3) feature gain fluctuations
+        J(k, 3, 1, l) = J0 - amplvar * sum((h .* dmu) .^ 2) / (sdbeta ^ -2 + sum(h .^ 2 .* mu));
+        
+        % (4) attended feature fluctuations
+        J(k, 4, 1, l) = J0 / (1 + (sdpsi ^ 2 * mbeta ^ 2 / kappa ^ 2) * J0);
+        
+        % add effect pf input noise
+        for j = 1 : nt
+            for i = 1 : 4
+                J(k, i, j + 1, l) = J(k, i, 1, l) / (1 + sdtheta(j) ^ 2 * J(k, i, 1, l));
+            end
         end
     end
 end
 
-fig = Figure(7, 'size', [110 50]);
-colors = [0 0 0; 0 0.7 0; 0.9 0.7 0.1; 1 0.2 0.2];
+fig = Figure(7, 'size', [90 90]);
+styles = {'-', 'o', '+', '-'};
+colors = [0 0.4 1; 0 0.4 1; 0 0.4 1; 1 0.2 0.2];
+skip = [1 4 4 1 ];
+start = [1 3 1 1];
 set(fig, 'DefaultAxesColorOrder', repmat(colors(1 : 4, :), 2, 1))
-Jmax = 5000;
+Jmax = [5000 800];
 nmax = 500;
 
 
 % [A] Fisher information in the absence of input noise
-subplot(1, 2, 1)
+subplot(2, 2, 1)
 hold on
-plot(n, J(:, :, 1))
+for i = 1 : 4
+    plot(n(start(i) : skip(i) : end), J(start(i) : skip(i) : end, i, 1, 2), styles{i}, 'Color', colors(i, :))
+end
+for i = [1 4]
+    plot(n, J(:, i, 1, 1), '--', 'Color', colors(i, :))
+end
 Jthresh = kappa ^ 2 / (sdpsi ^ 2 * mbeta ^ 2);
 plot(xlim, [1 1] * Jthresh, '--k')
 text(nmax, Jthresh, sprintf('%.2g', dp ./ sqrt(Jthresh) / pi * 180), 'FontSize', 14)
-set(gca, 'xlim', [0 nmax], 'ylim', [0 Jmax])
+set(gca, 'xlim', [0 nmax], 'xtick', 0 : 100 : 500, 'ylim', [0 Jmax(1)])
 xlabel('Number of neurons')
 ylabel('Fisher information')
 legend({'No fluctuations', 'Spatial gain', 'Feature gain', 'Attended feature'})
 axis square
 
 
-% [B] Fisher information with different levels of input noise
-subplot(1, 2, 2)
-hold on
-Jthresh = zeros(2);
-plot(n, J(:, 1, 1), ':k')
+% [B+C] Fisher information with low+high input noise
 for i = 1 : nt
-    plot(n, J(:, :, i + 1))
-    for j = 1 : 2
-        Jthresh(i, j) = kappa ^ 2 / (kappa ^ 2 * sdtheta(i) ^ 2 + (j - 1) * sdpsi ^ 2 * mbeta ^ 2);
-        plot(xlim, [1 1] * Jthresh(i, j), '--k')
+    subplot(2, 2, 2 + i)
+    hold on
+    plot(n, J(:, 1, 1, 2), ':k')
+    for j = 1 : 4
+        plot(n(start(j) : skip(j) : end), J(start(j) : skip(j) : end, j, i + 1, 2), styles{j}, 'Color', colors(j, :))
     end
+    for j = [1 4]
+        plot(n, J(:, j, i + 1, 1), '--', 'Color', colors(j, :))
+    end
+    for j = 1 : 2
+        Jthresh = kappa ^ 2 / (kappa ^ 2 * sdtheta(i) ^ 2 + (j - 1) * sdpsi ^ 2 * mbeta ^ 2);
+        plot(xlim, [1 1] * Jthresh, '--k')
+        text(nmax, Jthresh, sprintf('%.2g', dp ./ sqrt(Jthresh) / pi * 180), 'FontSize', 14)
+    end
+    set(gca, 'xlim', [0 nmax], 'xtick', 0 : 100 : 500, 'ylim', [0, Jmax(i)])
+    xlabel('Number of neurons')
+    axis square
 end
-set(gca, 'xlim', [0 nmax], 'ylim', [0 Jmax])
-xlabel('Number of neurons')
-for i = 1 : numel(Jthresh)
-    text(nmax, Jthresh(i), sprintf('%.2g', dp ./ sqrt(Jthresh(i)) / pi * 180), 'FontSize', 14)
-end
-axis square
-
 
 fig.cleanup();
 fig.save([mfilename('fullpath'), '_.eps'])
