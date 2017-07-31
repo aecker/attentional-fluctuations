@@ -11,7 +11,7 @@ state_, bioRxiv (2015). DOI: http://dx.doi.org/10.1101/018226
 ## How to use
 
 In Matlab, navigate to the folder containing this repository, then run 
-`startup` to set up the Matlab Path. To reproduce the figures, simply run
+`startup` to set up the Matlab path. To reproduce the figures, simply run
 the respective function `figX_Y`.
 
 If you have questions of find any bugs, please open an issue here on Github.
